@@ -67,7 +67,7 @@ public class Server {
                     output.println("Content-Type: " + cachedFile.getContentType());
                     output.println("Content-Length: " + cachedFile.getContentLength());
                     output.println("Last-Modified: " + cachedFile.getLastModified());
-                    //output.println("Etag: " + cachedFile.getEtag()); todo
+                    output.println("Etag: " + cachedFile.getEtag());
                     output.println();
                     output.println(cachedFile.getContent());
                 } catch (NotFoundException e) {

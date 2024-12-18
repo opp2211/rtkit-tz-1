@@ -3,9 +3,13 @@ package ru.rtkit;
 import ru.rtkit.exception.NotFoundException;
 
 import java.io.IOException;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -69,15 +73,20 @@ public class FileManager {
         }
 
         try {
-            String content = Files.readString(path);
+            byte[] bytes = Files.readAllBytes(path);
+            String content = new String(bytes, StandardCharsets.UTF_8);
             String contentType = Files.probeContentType(path);
+
+            byte[] hash = MessageDigest.getInstance("SHA-256").digest(bytes);
+            String checksum = new BigInteger(1, hash).toString(16);
+            String etag = "\"" + checksum.substring(0, 16) + "\"";
 
             BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
             long contentLength = attrs.size();
             String lastModified = attrs.lastModifiedTime().toInstant().atZone(ZoneId.of("GMT")).format(DATE_TIME_FORMATTER);
 
-            return new CachedFile(strPath, content, contentType, lastModified, contentLength);
-        } catch (IOException e) {
+            return new CachedFile(strPath, content, contentType, lastModified, contentLength, etag);
+        } catch (IOException | NoSuchAlgorithmException e) {
             throw new RuntimeException(e.getMessage());
         }
     }
