@@ -2,16 +2,17 @@ package ru.rtkit;
 
 import lombok.extern.slf4j.Slf4j;
 import ru.rtkit.exception.NotFoundException;
+import ru.rtkit.exception.NotModifiedException;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -34,18 +35,35 @@ public class FileManager {
         this.maxTotalContentLength = maxTotalContentLength;
     }
 
-    public CachedFile get(String strPath) {
+    public CachedFile get(String strPath, String etag, String modifiedSince) throws NotFoundException, NotModifiedException {
+        CachedFile cachedFile;
         if (cache.containsKey(strPath)) {
-            CachedFile cachedFile = cache.get(strPath);
+            cachedFile = cache.get(strPath);
             increment(cachedFile);
             log.debug("{} returned from cache", strPath);
-            return cachedFile;
         } else {
-            CachedFile newFile = loadFile(strPath);
-            insert(newFile);
+            cachedFile = loadFile(strPath);
+            insert(cachedFile);
             log.debug("{} returned from disk", strPath);
-            return newFile;
         }
+        if (etag != null) {
+            if (!cachedFile.getEtag().equals(etag)) {
+                return cachedFile;
+            } else {
+                throw new NotModifiedException("File etag matching passed etag");
+            }
+        } else if (modifiedSince != null) {
+            ZonedDateTime mo = ZonedDateTime.parse(modifiedSince, DATE_TIME_FORMATTER);
+            ZonedDateTime fileTime = ZonedDateTime.parse(cachedFile.getLastModified(), DATE_TIME_FORMATTER);
+            if (fileTime.isAfter(mo)) {
+                return cachedFile;
+            } else {
+                throw new NotModifiedException("Not modified since passed date");
+            }
+        } else {
+            return cachedFile;
+        }
+
     }
 
     private void increment(CachedFile cachedFile) {
@@ -70,7 +88,7 @@ public class FileManager {
         cache.remove(Objects.requireNonNull(lfuFile).getStrPath());
     }
 
-    private CachedFile loadFile(String strPath) {
+    private CachedFile loadFile(String strPath) throws NotFoundException {
         Path path = Path.of(RESOURCES_STR_PATH, rootDir, strPath);
         if (!Files.exists(path)) {
             throw new NotFoundException(String.format("File %s does not exist", strPath));

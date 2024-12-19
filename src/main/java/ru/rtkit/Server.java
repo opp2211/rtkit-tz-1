@@ -2,12 +2,15 @@ package ru.rtkit;
 
 import lombok.extern.slf4j.Slf4j;
 import ru.rtkit.exception.NotFoundException;
+import ru.rtkit.exception.NotModifiedException;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 
@@ -30,7 +33,7 @@ public class Server {
             while (true) {
                 Socket socket = serverSocket.accept();
                 log.debug("Client connected!");
-                threadPool.submit(() -> method(socket));
+                threadPool.submit(() -> readAndResponse(socket));
             }
         } catch (IOException e) {
             System.err.println(e.getMessage());
@@ -38,8 +41,7 @@ public class Server {
         }
     }
 
-    private void method(Socket socket) {
-
+    private void readAndResponse(Socket socket) {
         try (
                 BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
                 OutputStream out = socket.getOutputStream();
@@ -53,13 +55,22 @@ public class Server {
             }
             if (!requestStrings.isEmpty()) {
                 String[] split = Objects.requireNonNull(requestStrings.pollFirst()).split(" ");
-                String resource = split[1];
+                String method = split[0];
+                String strPath = split[1];
 
-                if (resource.equals("/")) {
-                    resource = "/index.html";
+                if (strPath.equals("/")) {
+                    strPath = "/index.html";
                 }
+
+                Map<String, String> headers = new HashMap<>();
+                requestStrings.stream()
+                        .map(s -> s.split(": "))
+                        .forEach(h -> headers.put(h[0], h[1]));
+
+                String modifiedSince = headers.get("If-Modified-Since");
+                String noneMatch = headers.get("If-None-Match");
                 try {
-                    CachedFile cachedFile = fileManager.get(resource);
+                    CachedFile cachedFile = fileManager.get(strPath, noneMatch, modifiedSince);
 
                     // отправляем ответ
                     pw.println("HTTP/1.1 200 OK");
@@ -71,6 +82,11 @@ public class Server {
                     pw.println(new String(cachedFile.getContent()));
                 } catch (NotFoundException e) {
                     pw.println("HTTP/1.1 404 Not Found");
+                    pw.println();
+                    pw.println(e.getMessage());
+                }
+                catch (NotModifiedException e) {
+                    pw.println("HTTP/1.1 304 Not Modified");
                     pw.println();
                     pw.println(e.getMessage());
                 }
