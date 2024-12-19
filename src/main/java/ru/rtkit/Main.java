@@ -25,7 +25,7 @@ public class Main {
         long cacheSize = HumanBytesFormatter.toBytes(props.getProperty("cache_size"));
         int port = Integer.parseInt(props.getProperty("port"));
 
-        FileManager fileManager = new FileManager(rootDir, cacheSize);
+        LFUFileManager fileManager = new LFUFileManager(rootDir, cacheSize);
 
         ExecutorService executorService = Executors.newCachedThreadPool();
         Server server = new Server(fileManager, port, executorService);

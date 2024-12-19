@@ -17,11 +17,13 @@ import java.util.concurrent.ExecutorService;
 @Slf4j
 public class Server {
 
-    private final FileManager fileManager;
+    private static final String MAIN_PAGE = "/index.html";
+
+    private final LFUFileManager fileManager;
     private final int port;
     private final ExecutorService threadPool;
 
-    public Server(FileManager fileManager, int port, ExecutorService threadPool) {
+    public Server(LFUFileManager fileManager, int port, ExecutorService threadPool) {
         this.fileManager = fileManager;
         this.port = port;
         this.threadPool = threadPool;
@@ -36,8 +38,7 @@ public class Server {
                 threadPool.submit(() -> readAndResponse(socket));
             }
         } catch (IOException e) {
-            System.err.println(e.getMessage());
-            System.exit(1);
+            log.error(e.getMessage(), e);
         }
     }
 
@@ -46,11 +47,7 @@ public class Server {
                 BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
                 BufferedOutputStream out = new BufferedOutputStream(socket.getOutputStream())
         ) {
-            LinkedList<String> requestStrings = new LinkedList<>();
-            String line;
-            while ((line = br.readLine()) != null && !line.isEmpty()) {
-                requestStrings.add(line);
-            }
+            LinkedList<String> requestStrings = readRequest(br);
             if (!requestStrings.isEmpty()) {
                 String firstLine = requestStrings.pollFirst();
                 log.info("Request: {}", firstLine);
@@ -59,7 +56,7 @@ public class Server {
                 String strPath = split[1];
 
                 if (strPath.equals("/")) {
-                    strPath = "/index.html";
+                    strPath = MAIN_PAGE;
                     log.info("Resource substituted to {}", strPath);
                 }
 
@@ -97,9 +94,18 @@ public class Server {
             }
         }
         catch (IOException e) {
-            System.err.println(e.getMessage());
+            log.error(e.getMessage(), e);
         }
         log.debug("Client disconnected!");
+    }
+
+    private static LinkedList<String> readRequest(BufferedReader br) throws IOException {
+        LinkedList<String> requestStrings = new LinkedList<>();
+        String line;
+        while ((line = br.readLine()) != null && !line.isEmpty()) {
+            requestStrings.add(line);
+        }
+        return requestStrings;
     }
 
     private void sendln(OutputStream out, String str) throws IOException {

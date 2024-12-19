@@ -17,21 +17,22 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Slf4j
-public class FileManager {
+public class LFUFileManager {
 
     private static final String RESOURCES_STR_PATH = "src/main/resources";
-    public static final DateTimeFormatter DATE_TIME_FORMATTER =
+    private static final DateTimeFormatter DATE_TIME_FORMATTER =
             DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss z").localizedBy(Locale.US);
 
     private final String rootDir;
     private final long maxTotalContentLength;
 
     private final Map<String, CachedFile> cache = new HashMap<>();
-    private final PriorityQueue<CachedFile> minHeap = new PriorityQueue<>(Comparator.comparingInt(CachedFile::getFrequency));
+    private final PriorityQueue<CachedFile> minHeap =
+            new PriorityQueue<>(Comparator.comparingInt(CachedFile::getFrequency));
 
     private long currentTotalContentLength;
 
-    public FileManager(String rootDir, long maxTotalContentLength) {
+    public LFUFileManager(String rootDir, long maxTotalContentLength) {
         this.rootDir = rootDir;
         this.maxTotalContentLength = maxTotalContentLength;
     }
@@ -111,7 +112,8 @@ public class FileManager {
 
             BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
             long contentLength = attrs.size();
-            String lastModified = attrs.lastModifiedTime().toInstant().atZone(ZoneId.of("GMT")).format(DATE_TIME_FORMATTER);
+            String lastModified = attrs.lastModifiedTime().toInstant().atZone(ZoneId.of("GMT"))
+                    .format(DATE_TIME_FORMATTER);
 
             return new CachedFile(strPath, bytes, contentType, lastModified, contentLength, etag);
         } catch (IOException | NoSuchAlgorithmException e) {
