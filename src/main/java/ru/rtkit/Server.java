@@ -44,10 +44,8 @@ public class Server {
     private void readAndResponse(Socket socket) {
         try (
                 BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-                OutputStream out = socket.getOutputStream();
-                PrintWriter pw = new PrintWriter(out)
+                BufferedOutputStream out = new BufferedOutputStream(socket.getOutputStream())
         ) {
-            //считываем все, что было отправлено клиентом
             LinkedList<String> requestStrings = new LinkedList<>();
             String line;
             while ((line = br.readLine()) != null && !line.isEmpty()) {
@@ -74,25 +72,25 @@ public class Server {
                 String noneMatch = headers.get("If-None-Match");
                 try {
                     CachedFile cachedFile = fileManager.get(strPath, noneMatch, modifiedSince);
-
-                    pw.println("HTTP/1.1 200 OK");
-                    pw.println("Content-Type: " + cachedFile.getContentType());
-                    pw.println("Content-Length: " + cachedFile.getContentLength());
-                    pw.println("Last-Modified: " + cachedFile.getLastModified());
-                    pw.println("Etag: " + cachedFile.getEtag());
-                    pw.println();
-                    pw.println(new String(cachedFile.getContent()));
+                    
+                    sendln(out, "HTTP/1.1 200 OK");
+                    sendln(out, "Content-Type: " + cachedFile.getContentType());
+                    sendln(out, "Content-Length: " + cachedFile.getContentLength());
+                    sendln(out, "Last-Modified: " + cachedFile.getLastModified());
+                    sendln(out, "Etag: " + cachedFile.getEtag());
+                    sendln(out);
+                    send(out, cachedFile.getContent());
                     log.info("Response is 200 OK");
                 } catch (NotFoundException e) {
-                    pw.println("HTTP/1.1 404 Not Found");
-                    pw.println();
-                    pw.println(e.getMessage());
+                    sendln(out, "HTTP/1.1 404 Not Found");
+                    sendln(out);
+                    sendln(out, e.getMessage());
                     log.info("Response is 404 Not Found");
                 }
                 catch (NotModifiedException e) {
-                    pw.println("HTTP/1.1 304 Not Modified");
-                    pw.println();
-                    pw.println(e.getMessage());
+                    sendln(out, "HTTP/1.1 304 Not Modified");
+                    sendln(out);
+                    sendln(out, e.getMessage());
                     log.info("Response is 304 Not Modified");
                 }
                 out.flush();
@@ -102,5 +100,22 @@ public class Server {
             System.err.println(e.getMessage());
         }
         log.debug("Client disconnected!");
+    }
+
+    private void sendln(OutputStream out, String str) throws IOException {
+        send(out, str);
+        sendln(out);
+    }
+
+    private void sendln(OutputStream out) throws IOException {
+        out.write(10);
+    }
+
+    private void send(OutputStream out, String str) throws IOException {
+        send(out, str.getBytes());
+    }
+
+    private void send(OutputStream out, byte[] bytes) throws IOException {
+        out.write(bytes);
     }
 }
