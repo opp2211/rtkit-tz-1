@@ -3,10 +3,7 @@ package ru.rtkit;
 import lombok.extern.slf4j.Slf4j;
 import ru.rtkit.exception.NotFoundException;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -42,9 +39,11 @@ public class Server {
     }
 
     private void method(Socket socket) {
+
         try (
                 BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-                PrintWriter output = new PrintWriter(socket.getOutputStream())
+                OutputStream out = socket.getOutputStream();
+                PrintWriter pw = new PrintWriter(out)
         ) {
             //считываем все, что было отправлено клиентом
             LinkedList<String> requestStrings = new LinkedList<>();
@@ -63,19 +62,19 @@ public class Server {
                     CachedFile cachedFile = fileManager.get(resource);
 
                     // отправляем ответ
-                    output.println("HTTP/1.1 200 OK");
-                    output.println("Content-Type: " + cachedFile.getContentType());
-                    output.println("Content-Length: " + cachedFile.getContentLength());
-                    output.println("Last-Modified: " + cachedFile.getLastModified());
-                    output.println("Etag: " + cachedFile.getEtag());
-                    output.println();
-                    output.println(cachedFile.getContent());
+                    pw.println("HTTP/1.1 200 OK");
+                    pw.println("Content-Type: " + cachedFile.getContentType());
+                    pw.println("Content-Length: " + cachedFile.getContentLength());
+                    pw.println("Last-Modified: " + cachedFile.getLastModified());
+                    pw.println("Etag: " + cachedFile.getEtag());
+                    pw.println();
+                    pw.println(new String(cachedFile.getContent()));
                 } catch (NotFoundException e) {
-                    output.println("HTTP/1.1 404 Not Found");
-                    output.println();
-                    output.println(e.getMessage());
+                    pw.println("HTTP/1.1 404 Not Found");
+                    pw.println();
+                    pw.println(e.getMessage());
                 }
-                output.flush();
+                out.flush();
             }
         }
         catch (IOException e) {

@@ -1,5 +1,6 @@
 package ru.rtkit;
 
+import lombok.extern.slf4j.Slf4j;
 import ru.rtkit.exception.NotFoundException;
 
 import java.io.IOException;
@@ -14,6 +15,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+@Slf4j
 public class FileManager {
 
     private static final String RESOURCES_STR_PATH = "src/main/resources";
@@ -36,10 +38,12 @@ public class FileManager {
         if (cache.containsKey(strPath)) {
             CachedFile cachedFile = cache.get(strPath);
             increment(cachedFile);
+            log.debug("{} returned from cache", strPath);
             return cachedFile;
         } else {
             CachedFile newFile = loadFile(strPath);
             insert(newFile);
+            log.debug("{} returned from disk", strPath);
             return newFile;
         }
     }
@@ -74,7 +78,6 @@ public class FileManager {
 
         try {
             byte[] bytes = Files.readAllBytes(path);
-            String content = new String(bytes, StandardCharsets.UTF_8);
             String contentType = Files.probeContentType(path);
 
             byte[] hash = MessageDigest.getInstance("SHA-256").digest(bytes);
@@ -85,7 +88,7 @@ public class FileManager {
             long contentLength = attrs.size();
             String lastModified = attrs.lastModifiedTime().toInstant().atZone(ZoneId.of("GMT")).format(DATE_TIME_FORMATTER);
 
-            return new CachedFile(strPath, content, contentType, lastModified, contentLength, etag);
+            return new CachedFile(strPath, bytes, contentType, lastModified, contentLength, etag);
         } catch (IOException | NoSuchAlgorithmException e) {
             throw new RuntimeException(e.getMessage());
         }

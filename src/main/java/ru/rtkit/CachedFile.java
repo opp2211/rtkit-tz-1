@@ -8,13 +8,13 @@ import lombok.Setter;
 public class CachedFile {
     private int frequency;
     private String strPath;
-    private String content;
+    private byte[] content;
     private String contentType;
     private String lastModified;
     private long contentLength;
     private String etag;
 
-    public CachedFile(String strPath, String content, String contentType, String lastModified, long contentLength, String etag) {
+    public CachedFile(String strPath, byte[] content, String contentType, String lastModified, long contentLength, String etag) {
         this.frequency = 1;
         this.strPath = strPath;
         this.content = content;
