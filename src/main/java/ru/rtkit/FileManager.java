@@ -20,7 +20,8 @@ import java.util.*;
 public class FileManager {
 
     private static final String RESOURCES_STR_PATH = "src/main/resources";
-    public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss z");
+    public static final DateTimeFormatter DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss z").localizedBy(Locale.US);
 
     private final String rootDir;
     private final long maxTotalContentLength;
