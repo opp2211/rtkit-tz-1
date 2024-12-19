@@ -54,12 +54,15 @@ public class Server {
                 requestStrings.add(line);
             }
             if (!requestStrings.isEmpty()) {
-                String[] split = Objects.requireNonNull(requestStrings.pollFirst()).split(" ");
+                String firstLine = requestStrings.pollFirst();
+                log.info("Request: {}", firstLine);
+                String[] split = Objects.requireNonNull(firstLine).split(" ");
                 String method = split[0];
                 String strPath = split[1];
 
                 if (strPath.equals("/")) {
                     strPath = "/index.html";
+                    log.info("Resource substituted to {}", strPath);
                 }
 
                 Map<String, String> headers = new HashMap<>();
@@ -72,7 +75,6 @@ public class Server {
                 try {
                     CachedFile cachedFile = fileManager.get(strPath, noneMatch, modifiedSince);
 
-                    // отправляем ответ
                     pw.println("HTTP/1.1 200 OK");
                     pw.println("Content-Type: " + cachedFile.getContentType());
                     pw.println("Content-Length: " + cachedFile.getContentLength());
@@ -80,21 +82,24 @@ public class Server {
                     pw.println("Etag: " + cachedFile.getEtag());
                     pw.println();
                     pw.println(new String(cachedFile.getContent()));
+                    log.info("Response is 200 OK");
                 } catch (NotFoundException e) {
                     pw.println("HTTP/1.1 404 Not Found");
                     pw.println();
                     pw.println(e.getMessage());
+                    log.info("Response is 404 Not Found");
                 }
                 catch (NotModifiedException e) {
                     pw.println("HTTP/1.1 304 Not Modified");
                     pw.println();
                     pw.println(e.getMessage());
+                    log.info("Response is 304 Not Modified");
                 }
                 out.flush();
             }
         }
         catch (IOException e) {
-            throw new RuntimeException(e);
+            System.err.println(e.getMessage());
         }
         log.debug("Client disconnected!");
     }

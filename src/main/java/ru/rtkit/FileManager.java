@@ -47,17 +47,23 @@ public class FileManager {
             log.debug("{} returned from disk", strPath);
         }
         if (etag != null) {
+            log.debug("Having etag option: {}", etag);
             if (!cachedFile.getEtag().equals(etag)) {
+                log.debug("{File tag: {} not equals passed etag: {}", cachedFile.getEtag(), etag);
                 return cachedFile;
             } else {
+                log.debug("Etags dont match: {}", etag);
                 throw new NotModifiedException("File etag matching passed etag");
             }
         } else if (modifiedSince != null) {
+            log.debug("Having modifiedSince option: {}", modifiedSince);
             ZonedDateTime mo = ZonedDateTime.parse(modifiedSince, DATE_TIME_FORMATTER);
             ZonedDateTime fileTime = ZonedDateTime.parse(cachedFile.getLastModified(), DATE_TIME_FORMATTER);
             if (fileTime.isAfter(mo)) {
+                log.debug("Success: File modified since passed date, LastModified: {}", cachedFile.getLastModified());
                 return cachedFile;
             } else {
+                log.debug("Fail: File not modified since passed date, LastModified: {}", cachedFile.getLastModified());
                 throw new NotModifiedException("Not modified since passed date");
             }
         } else {
