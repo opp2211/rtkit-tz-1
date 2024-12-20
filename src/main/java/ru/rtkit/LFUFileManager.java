@@ -37,7 +37,7 @@ public class LFUFileManager {
         this.maxTotalContentLength = maxTotalContentLength;
     }
 
-    public CachedFile get(String strPath, String etag, String modifiedSince) throws NotFoundException, NotModifiedException {
+    public synchronized CachedFile get(String strPath, String etag, String modifiedSince) throws NotFoundException, NotModifiedException {
         CachedFile cachedFile;
         if (cache.containsKey(strPath)) {
             cachedFile = cache.get(strPath);
